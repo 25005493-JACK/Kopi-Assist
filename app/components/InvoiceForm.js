@@ -289,7 +289,7 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
 
           <div className="grid-2" style={{ marginTop: '20px' }}>
             <div className="form-group">
-              <label className="form-label">{t('taxRate')} (%)</label>
+              <label className="form-label">{t('taxRate')}</label>
               <input className="form-input" type="number" min="0" max="100" value={b2bForm.tax} onChange={e => setB2bForm(f => ({ ...f, tax: parseFloat(e.target.value) || 0 }))} />
             </div>
             <div className="form-group">
