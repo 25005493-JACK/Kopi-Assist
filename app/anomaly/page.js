@@ -490,7 +490,7 @@ export default function AnomalyPage() {
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,185,129,0.1)" />
                               <XAxis dataKey="label" stroke="#5a826a" fontSize={10} />
-                              <YAxis stroke="#5a826a" fontSize={10} unit="%" tickFormatter={v => `${v}%`} />
+                              <YAxis stroke="#5a826a" fontSize={10} tickFormatter={v => `${v}%`} />
                               <Tooltip contentStyle={{ background: '#020a05', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px', color: '#e6f4ea' }} formatter={(v, name) => [`${v}%`, name]} />
                               <Legend />
                               <Area type="monotone" dataKey="system_down_risk" name="System Down Risk" stroke="var(--accent-red)" strokeWidth={2.5} fill="url(#grad-op-sys-risk)" />

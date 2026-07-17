@@ -7,7 +7,7 @@ import Papa from 'papaparse';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ company_name: '', password: '', headcount: '', industry: '', avg_monthly_revenue: '', outlets: '5' });
+  const [form, setForm] = useState({ company_name: '', password: '', headcount: '', industry: 'F&B', avg_monthly_revenue: '', outlets: '5' });
   const [menuFile, setMenuFile] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -152,19 +152,13 @@ export default function LoginPage() {
                     <input className="form-input" type="number" value={form.headcount} onChange={e => setForm(f => ({ ...f, headcount: e.target.value }))} placeholder="e.g. 25" />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('industryLabel')}</label>
-                    <input className="form-input" value={form.industry} onChange={e => setForm(f => ({ ...f, industry: e.target.value }))} placeholder="e.g. F&B, Retail" />
-                  </div>
-                </div>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">{t('avgRevenueLabel')}</label>
-                    <input className="form-input" type="number" value={form.avg_monthly_revenue} onChange={e => setForm(f => ({ ...f, avg_monthly_revenue: e.target.value }))} placeholder="e.g. 50000" />
-                  </div>
-                  <div className="form-group">
                     <label className="form-label">{t('numOutletsLabel')}</label>
                     <input className="form-input" type="number" min="1" value={form.outlets} onChange={e => setForm(f => ({ ...f, outlets: e.target.value }))} placeholder="e.g. 5" required />
                   </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('avgRevenueLabel')}</label>
+                  <input className="form-input" type="number" value={form.avg_monthly_revenue} onChange={e => setForm(f => ({ ...f, avg_monthly_revenue: e.target.value }))} placeholder="e.g. 50000" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('menuUploadLabel')}</label>
