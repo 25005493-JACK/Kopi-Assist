@@ -33,14 +33,14 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
 
   // Load menu items once
   useEffect(() => {
-    if (mode !== 'b2c') return;
+    if (mode !== 'b2c' || !company?.id) return;
     setMenuLoading(true);
-    fetch('/api/menu')
+    fetch(`/api/menu?company_id=${company.id}`)
       .then(r => r.json())
       .then(d => setMenuItems(d.items || []))
       .catch(() => {})
       .finally(() => setMenuLoading(false));
-  }, [mode]);
+  }, [mode, company?.id]);
 
   // ── B2B helpers ────────────────────────────────────────────
   const addB2bItem = () => setB2bForm(f => ({ ...f, items: [...f.items, { description: '', quantity: 1, unitPrice: 0 }] }));

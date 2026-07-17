@@ -76,7 +76,7 @@ export async function POST(request) {
     if (body.menu && Array.isArray(body.menu)) {
       const MENU_TABLE_ID = process.env.BASEROW_MENU_TABLE_ID;
       try {
-        const getRes = await fetch(`${BASEROW_URL}/api/database/rows/table/${MENU_TABLE_ID}/?size=200`, {
+        const getRes = await fetch(`${BASEROW_URL}/api/database/rows/table/${MENU_TABLE_ID}/?user_field_names=true&filter__company_id__equal=${newCompany.id}&size=200`, {
           headers: { 'Authorization': `Token ${TOKEN}` }
         });
         if (getRes.ok) {
@@ -105,7 +105,8 @@ export async function POST(request) {
               },
               body: JSON.stringify({
                 Item_Name: item.Item_Name,
-                Active: parseFloat(item.Price || item.Active || 0).toFixed(2)
+                price: parseFloat(item.Price || item.Active || item.price || 0),
+                company_id: newCompany.id
               })
             });
           }
