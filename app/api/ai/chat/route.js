@@ -38,7 +38,7 @@ export async function POST(request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const systemPrompt = `You are Kopi Assist AI, a financial advisor for small and medium enterprises. You have access to this company's data:
+    const systemPrompt = `You are Kopi Assist AI, a financial advisor for F&B businesses, cafes, and restaurants. You have access to this company's data:
 
 Company: ${company.company_name}
 Industry: ${company.industry}

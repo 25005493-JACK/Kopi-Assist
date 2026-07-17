@@ -40,7 +40,7 @@ export async function POST(request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const prompt = `You are a financial risk analyst for SMEs. Analyze this company and produce incident predictions.
+    const prompt = `You are a financial risk analyst for F&B companies. Analyze this company and produce incident predictions.
 
 Company: ${company.company_name}
 Industry: ${company.industry}
@@ -99,23 +99,43 @@ Only return the JSON, no other text.`;
     } catch (aiErr) {
       console.warn("AI Prediction failed, returning mock scenarios:", aiErr.message);
       
-      const rev = parseFloat(company.avg_monthly_revenue) || 25000;
-      const expBase = rev * 0.75;
+      // Calculate actual average monthly income & expenses from real transaction data
+      const monthlyData = {};
+      allRows.forEach(r => {
+        const month = r.date ? r.date.substring(0, 7) : null;
+        if (!month) return;
+        if (!monthlyData[month]) monthlyData[month] = { income: 0, expenses: 0 };
+        const amt = parseFloat(r.amount) || 0;
+        if (r.type === 'income') monthlyData[month].income += amt;
+        else monthlyData[month].expenses += amt;
+      });
+      const monthEntries = Object.values(monthlyData);
+      const actualRevAvg = monthEntries.length > 0
+        ? monthEntries.reduce((s, m) => s + m.income, 0) / monthEntries.length
+        : 0;
+      const actualExpAvg = monthEntries.length > 0
+        ? monthEntries.reduce((s, m) => s + m.expenses, 0) / monthEntries.length
+        : 0;
+
+      // Use real data if available, otherwise fall back to company profile estimate
+      const rev = actualRevAvg > 0 ? Math.round(actualRevAvg) : (parseFloat(company.avg_monthly_revenue) || 25000);
+      const expBase = actualExpAvg > 0 ? Math.round(actualExpAvg) : rev * 0.75;
       const industry = company.industry || 'your industry';
       const name = company.company_name || 'Your company';
+
       
       const scenarios = [
         {
           id: "FESTIVE_SEASON",
           title: "Festive Season Surge",
-          impact: "Demand for products spikes significantly due to major cultural celebrations (Chinese New Year, Hari Raya, or Year End). Cash balances rise, but upfront supply costs increase.",
+          impact: "Dine-in and food delivery orders surge 2–3x during Hari Raya, Chinese New Year, or Year-End celebrations. Ingredient demand spikes and kitchen throughput is stretched to its limit, creating both high revenue opportunity and high operational risk if not prepared.",
           severity: "medium",
           actions: [
-            "Increase inventory holdings by 30% at least 45 days prior to peak season",
-            "Hire short-term part-time staff to handle shop front and customer service load",
-            "Negotiate extended payment terms (e.g. Net 60) with key suppliers to protect cash flow"
+            "Pre-order bulk dry ingredients and sauces at least 45 days before the festive window to lock in lower prices before demand-driven inflation hits wet market suppliers",
+            "Hire short-term kitchen assistants and floor crew on a 2-month contract to handle the increased cover count without overworking permanent staff",
+            "Create festive-only limited menu sets (e.g. Raya hamper bundles, CNY combo meals) to drive higher average order value while simplifying kitchen execution"
           ],
-          consequence: `${name} will miss the peak revenue window entirely, allowing competitors to capture festive demand. Without pre-stocked inventory, stockouts during the busiest sales period will cause an estimated 35–50% revenue shortfall versus potential. Customer loyalty will erode as buyers shift to better-prepared alternatives, making recovery harder even after the season ends.`,
+          consequence: `${name} will miss the single highest-revenue window of the F&B calendar entirely — festive seasons can represent 30–40% of a restaurant's annual revenue. Without pre-stocked ingredients, the kitchen will face mid-peak stockouts on popular items, forcing early 86s (out-of-stock notices) that drive diners to competitors. Negative GrabFood and Shopee Food reviews during the festive rush will suppress platform rankings for months after the season ends, compounding the financial damage well beyond the holiday period.`,
           cashflow: [
             { month: "Month 1", projected_income: Math.round(rev * 1.0), projected_expenses: Math.round(expBase * 1.0), net_cashflow: Math.round(rev * 0.25) },
             { month: "Month 2", projected_income: Math.round(rev * 1.4), projected_expenses: Math.round(expBase * 1.2), net_cashflow: Math.round((rev * 1.4) - (expBase * 1.2)) },
@@ -127,15 +147,15 @@ Only return the JSON, no other text.`;
         },
         {
           id: "MCO_LOCKDOWN",
-          title: "MCO / Lockdown restrictions",
-          impact: "Operations are restricted to online channels only. Retail foot traffic hits zero. Revenues contract by up to 70% while fixed costs remain high.",
+          title: "MCO / Dine-In Restrictions",
+          impact: "Dine-in operations are suspended. Walk-in revenue drops to zero. The outlet must pivot fully to delivery and takeaway, absorbing GrabFood/Shopee Food platform commissions of up to 30% — drastically compressing margins on every order.",
           severity: "high",
           actions: [
-            "Immediately transition sales channels to e-commerce and home delivery models",
-            "Renegotiate with landlord for a temporary 30-50% rental discount during the MCO period",
-            "Minimize discretionary operational expenses and pause active retail marketing spend"
+            "Immediately activate GrabFood, Shopee Food, and Food Panda storefronts and run platform-subsidised promotions to maintain order volume during the lockdown period",
+            "Renegotiate rental with the landlord for a 30–50% temporary deferral, citing the forced closure of dine-in — most commercial landlords have MCO hardship clauses",
+            "Introduce a cost-engineered 'MCO Survival Menu' with only the top 8–10 highest-margin dishes that are delivery-optimised (travel well, low waste, fast prep time)"
           ],
-          consequence: `Without pivoting to digital channels, ${name} will burn through cash reserves at an accelerated rate — fixed costs (rent, salaries, utilities) will consume an estimated RM ${Math.round(expBase * 0.8).toLocaleString()} monthly with near-zero revenue. After 3 months of inaction, cumulative losses could reach RM ${Math.round(expBase * 0.8 * 3 - rev * 0.35 * 3).toLocaleString()}, threatening the business's ability to reopen once restrictions lift.`,
+          consequence: `Without a delivery-first pivot, ${name} will absorb full fixed costs (rent at RM ${Math.round(expBase * 0.2).toLocaleString()}/month, salaries, utilities) against near-zero dine-in revenue. After 3 months of inaction, cumulative cash burn could reach RM ${Math.round(expBase * 0.8 * 3 - rev * 0.35 * 3).toLocaleString()}, exhausting operating reserves and likely forcing premature staff retrenchments. Perishable ingredient inventory will also generate significant food waste losses daily if orders do not materialise, adding hidden losses on top of the revenue gap.`,
           cashflow: [
             { month: "Month 1 (MCO Start)", projected_income: Math.round(rev * 0.35), projected_expenses: Math.round(expBase * 0.8), net_cashflow: Math.round((rev * 0.35) - (expBase * 0.8)) },
             { month: "Month 2", projected_income: Math.round(rev * 0.35), projected_expenses: Math.round(expBase * 0.75), net_cashflow: Math.round((rev * 0.35) - (expBase * 0.75)) },
@@ -148,14 +168,14 @@ Only return the JSON, no other text.`;
         {
           id: "ECONOMIC_DOWNTURN",
           title: "Economic Downturn (Recession)",
-          impact: "Consumer purchasing power drops, decreasing store revenues by 30% over a prolonged period. Pressure builds on margins.",
+          impact: "Consumer discretionary dining spend contracts by 25–35%. Customers trade down from dine-in to cheaper takeaway or cook-at-home options. Delivery order volumes fall and average basket sizes shrink as consumers cut non-essential spending.",
           severity: "high",
           actions: [
-            "Downsize inventory SKU counts to focus strictly on essential, fast-moving products",
-            "Launch budget-focused bundles or loyalty campaigns to retain cash-strapped consumers",
-            "Reduce internal operating costs (such as utilities, packaging, and non-essential travel)"
+            "Streamline the menu to your top 15 highest-margin, fastest-selling items — reducing ingredient variety lowers procurement costs and minimises food waste during a low-traffic period",
+            "Launch value-bundle promotions (e.g. 'RM 15 set lunch for 2') to retain price-sensitive customers and protect cover count without deep discounting individual items",
+            "Renegotiate supplier credit terms from Net 15 to Net 30 and source fresh produce from Pasar Borong (wholesale markets) directly to cut ingredient costs by up to 20%"
           ],
-          consequence: `${name} will face persistent margin compression as revenue stays 25–30% below pre-recession levels while costs remain sticky. Without a lean cost structure, monthly net losses will widen over 3 months — total cumulative deficit could reach RM ${Math.round(((rev * 0.7) - (expBase * 0.85)) * 3 * -1).toLocaleString()} if expenses aren't restructured. Prolonged negative cash flow will impair supplier credit terms, limiting the ability to restock when the economy recovers.`,
+          consequence: `${name} will face persistent food cost pressure — ingredient prices often lag economic conditions, meaning costs remain high even as customer spending drops. Without menu rationalisation, the food cost ratio (ideally 28–35% for F&B) may climb above 45%, eroding every order's contribution margin. After 3 months of inaction, the cumulative deficit could reach RM ${Math.round(((rev * 0.7) - (expBase * 0.85)) * 3 * -1).toLocaleString()}, and the business risks losing trained kitchen staff who will seek more stable income elsewhere, further degrading service quality and the ability to recover when conditions improve.`,
           cashflow: [
             { month: "Month 1", projected_income: Math.round(rev * 0.8), projected_expenses: Math.round(expBase * 0.95), net_cashflow: Math.round((rev * 0.8) - (expBase * 0.95)) },
             { month: "Month 2", projected_income: Math.round(rev * 0.75), projected_expenses: Math.round(expBase * 0.9), net_cashflow: Math.round((rev * 0.75) - (expBase * 0.9)) },
@@ -167,15 +187,15 @@ Only return the JSON, no other text.`;
         },
         {
           id: "SUPPLY_CHAIN_STUN",
-          title: "Supply Chain disruption / Stun",
-          impact: "Key inventory suppliers face logistical blocks, raw material shortages, or factory shutdowns. Stock levels drop, leading to unfulfilled client orders and customer attrition.",
+          title: "Ingredient Supply Chain Disruption",
+          impact: "Key raw ingredient suppliers — wet market vendors, food distributors, or packaging suppliers — face shortages, price spikes, or logistical delays. Core menu items cannot be prepared, forcing last-minute menu changes and disappointing regulars.",
           severity: "high",
           actions: [
-            "Identify and contract secondary regional and domestic backup suppliers immediately",
-            "Implement a safety stock reserve policy of 1.5x standard monthly demand for critical SKUs",
-            "Divert sales to substitute inventory lines that rely on independent, local supply networks"
+            "Register immediately with at least 2–3 alternative fresh produce suppliers or Pasar Borong (wholesale market) distributors per ingredient category to eliminate single-supplier dependency",
+            "Implement a minimum safety stock of 5–7 days for dry ingredients and 2–3 days for fresh produce to buffer against sudden delivery delays from primary suppliers",
+            "Engineer 2–3 ingredient-flexible 'substitute dishes' into the menu that can replace affected items when a key ingredient is unavailable, maintaining cover count without 86-ing customer favourites"
           ],
-          consequence: `${name} will exhaust existing stock within weeks, forcing it to turn away orders and issue refunds — directly eroding RM ${Math.round(rev * 0.35).toLocaleString()} or more in monthly revenue. After 3 months without a backup supplier, customer churn to competitors with consistent stock availability will become structural and difficult to reverse. Supplier relationship damage may also result in stricter credit terms or upfront payment requirements post-disruption.`,
+          consequence: `${name} will be forced to 86 key menu items within days as fresh ingredients run out — in F&B, a menu missing its signature dishes loses its primary selling proposition. After 3 months without backup suppliers, regular diners who cannot find their preferred items will permanently shift to competitor restaurants, generating an estimated RM ${Math.round(rev * 0.35).toLocaleString()} in monthly recurring revenue loss. Emergency spot-buying from retail supermarkets at retail price (vs. bulk distributor price) will inflate food cost ratios by 15–25%, further squeezing already thin F&B margins.`,
           cashflow: [
             { month: "Month 1 (Stun Start)", projected_income: Math.round(rev * 0.9), projected_expenses: Math.round(expBase * 1.1), net_cashflow: Math.round((rev * 0.9) - (expBase * 1.1)) },
             { month: "Month 2", projected_income: Math.round(rev * 0.65), projected_expenses: Math.round(expBase * 0.85), net_cashflow: Math.round((rev * 0.65) - (expBase * 0.85)) },
@@ -187,15 +207,15 @@ Only return the JSON, no other text.`;
         },
         {
           id: "PLATFORM_SHUTDOWN",
-          title: "Online Retail Platform Shutdown",
-          impact: "Your primary digital storefront (Shopify/Shopee/Lazada) goes down due to system failures, cloud outages, or merchant account suspension. Incoming online orders halt instantly.",
+          title: "Food Delivery Platform Suspension",
+          impact: "Your primary food delivery storefront (GrabFood, Shopee Food, or Food Panda) is suspended due to merchant account violations, low ratings, or platform-side outages. Online delivery revenue — often 40–60% of total F&B revenue — halts instantly.",
           severity: "high",
           actions: [
-            "Set up WhatsApp Business and social commerce ordering channels as instant fallback mechanisms",
-            "Send an immediate newsletter/SMS campaign to your customer base redirecting traffic to your backup landing pages",
-            "Establish secondary merchant accounts on a separate platform to prevent single-point-of-failure lockouts"
+            "Immediately activate a WhatsApp Business ordering channel with a photo menu and DuitNow QR payment link to capture direct orders and avoid the 25–30% platform commission during the outage",
+            "SMS-blast your existing customer database redirecting them to direct ordering channels or alternative platforms (e.g. if GrabFood suspends, activate Shopee Food as your primary delivery channel)",
+            "Establish merchant accounts on all major platforms simultaneously — GrabFood, Shopee Food, and Food Panda — to eliminate single-platform dependency and maintain revenue continuity if one platform suspends"
           ],
-          consequence: `With the primary storefront offline and no fallback channel, ${name} will lose its entire online revenue stream — approximately RM ${Math.round(rev * 0.75).toLocaleString()} per month — within days. Over 3 months, organic search rankings and platform algorithm scores will decay sharply, meaning even after restoration, recovering prior visibility and sales volume could take 6–12 months. The prolonged absence will also allow competing sellers to capture the business's customer base permanently.`,
+          consequence: `With the primary delivery platform offline and no direct ordering fallback, ${name} will lose 40–60% of total monthly revenue — approximately RM ${Math.round(rev * 0.5).toLocaleString()} — within 48 hours. Over 3 months, the platform's algorithm will de-rank the restaurant's listing (lower search visibility, fewer recommended slots), meaning even after reinstatement, recovering to prior order volume could take 4–6 months of sustained promotional spending. The sustained revenue cliff will also strain the owner's ability to pay kitchen staff wages on time, risking a staff exodus at the worst possible moment.`,
           cashflow: [
             { month: "Month 1", projected_income: Math.round(rev * 1.0), projected_expenses: Math.round(expBase * 1.0), net_cashflow: Math.round(rev * 0.25) },
             { month: "Month 2 (Outage)", projected_income: Math.round(rev * 0.25), projected_expenses: Math.round(expBase * 0.7), net_cashflow: Math.round((rev * 0.25) - (expBase * 0.7)) },
@@ -207,15 +227,15 @@ Only return the JSON, no other text.`;
         },
         {
           id: "SYSTEM_OUTAGE",
-          title: "IT Infrastructure System Outage",
-          impact: "Core IT backend systems (database, servers, cloud hosting, or third-party payment gateway integration) crash. Credit card checkouts fail, resulting in immediate transaction losses and server recovery expenses.",
+          title: "POS & Payment System Outage",
+          impact: "The restaurant's POS system (e.g. StoreHub, Eats365, or Square) crashes or the payment gateway fails. Card and QR payments cannot be processed. The kitchen loses order tickets, causing confusion during service and causing tables to leave unpaid or unfulfilled.",
           severity: "high",
           actions: [
-            "Configure multi-region hot-standby servers with active automated database failover scripts",
-            "Implement client-side offline storage cache inside checkout applications to record sales queue buffers",
-            "Set up instant uptime status alerts to monitor endpoint responses and alert vendor technical support"
+            "Maintain a printed manual order docket system and a designated cash-only fallback mode — train all floor and kitchen staff to switch within 5 minutes of a POS failure",
+            "Subscribe to a POS vendor SLA that guarantees 4-hour maximum downtime response, and keep a backup tablet with an offline-capable POS app (e.g. Square offline mode) charged and ready",
+            "Set up real-time uptime monitoring alerts (e.g. via POS vendor dashboard or UptimeRobot) to notify the outlet manager immediately when the system goes down during service hours"
           ],
-          consequence: `Every hour of downtime costs ${name} an estimated RM ${Math.round(rev / 300).toLocaleString()} in lost transactions; 3 months without system restoration would result in catastrophic cumulative revenue loss and potential data integrity issues. Customer trust will collapse as failed payments and lost order histories drive negative reviews, with recovery requiring expensive emergency IT contracts on top of the already incurred losses. Regulatory exposure is also possible if transaction records are corrupted during the outage period.`,
+          consequence: `Every 1 hour of POS downtime during a lunch or dinner peak costs ${name} an estimated RM ${Math.round(rev / 240).toLocaleString()} in lost table covers and delivery ticket processing. 3 months of recurring outages without resolution would result in severe customer trust erosion — diners who experienced a poor service episode due to system failures are statistically 3x less likely to return. Kitchen teams operating without order management systems also face significant food waste from misfired dishes, adding hidden costs on top of the direct revenue losses.`,
           cashflow: [
             { month: "Month 1", projected_income: Math.round(rev * 1.0), projected_expenses: Math.round(expBase * 1.0), net_cashflow: Math.round(rev * 0.25) },
             { month: "Month 2 (Crash)", projected_income: Math.round(rev * 0.4), projected_expenses: Math.round(expBase * 1.3), net_cashflow: Math.round((rev * 0.4) - (expBase * 1.3)) },
@@ -227,17 +247,17 @@ Only return the JSON, no other text.`;
         },
         {
           id: "OPERATION_FAILURE",
-          title: "Operational Overload & System Failure",
-          impact: "Transaction volume at one or more outlets exceeds 25 per minute, overwhelming POS systems, payment gateways, and kitchen workflows. Systems freeze, queues build rapidly, and stock depletes faster than supply can cover.",
+          title: "Operational Overload & Kitchen Breakdown",
+          impact: "Order volume across outlets exceeds kitchen throughput capacity — more than 25 tickets per minute overwhelms kitchen crews, causes ticket backlog, degrades food quality, and triggers delivery partner complaints. POS freezes and delivery platform SLA timers breach, leading to automatic order cancellations.",
           severity: "high",
           actions: [
-            "Deploy IT engineer on standby during peak hours (e.g. lunch & dinner rush) to respond immediately to system freezes",
-            "Prepare a manual cashier backup: printed order sheets, manual cash tally, and designated offline payment fallback (Cash Only mode)",
-            "Install real-time transaction-rate monitoring dashboard — alert triggered at >20 TXN/min per outlet",
-            "Pre-position safety stock at each outlet before peak periods based on historical sales velocity",
-            "Implement outlet-level stock depletion alerts: when stock drops below 20% of daily par, auto-notify the owner to restock"
+            "Station a dedicated kitchen coordinator (expeditor) during peak lunch and dinner hours to manage ticket flow, call out orders, and prevent bottlenecks at the pass",
+            "Implement a delivery order throttle on GrabFood and Shopee Food — set maximum concurrent orders to 80% of kitchen capacity during peak hours to prevent SLA breaches and food quality decline",
+            "Install real-time KDS (Kitchen Display System) alerts — when ticket queue exceeds 15 pending orders, auto-pause new delivery platform orders until the backlog clears",
+            "Pre-prep high-volume menu items (e.g. portion and marinate proteins, pre-cook rice, prep sauces) before each meal service to reduce cook time and increase throughput per station",
+            "Implement outlet-level ingredient depletion alerts: when any key ingredient drops below 20% of daily par level, auto-notify the outlet manager for emergency restocking via backup supplier"
           ],
-          consequence: `Without operational safeguards, ${name} risks complete service halt during peak hours — losing an estimated RM ${Math.round(rev * 0.4 / 30 * 3).toLocaleString()} per day in missed transactions when systems fail. Repeated failures erode customer trust and drive negative online reviews on Shopee Food and Food Panda, reducing the platform ranking and reducing future order volume. Stock depletion without restocking alerts can result in menu item unavailability, forcing refunds and order cancellations that damage brand reputation across all 5 outlets.`,
+          consequence: `Without operational safeguards, ${name} risks complete kitchen breakdown during peak hours — losing an estimated RM ${Math.round(rev * 0.4 / 30 * 3).toLocaleString()} per day in cancelled and refunded orders when ticket queues overflow. Repeated delivery SLA breaches will trigger automatic penalties and ranking suppression on GrabFood and Shopee Food, reducing the restaurant's visibility and new customer acquisition for months after the incident. Chronic overload also accelerates kitchen staff burnout and turnover — replacing a trained line cook in the F&B industry typically takes 4–6 weeks of hiring and training, during which service quality and speed are degraded further.`,
           system_load: [
             { label: '5 TXN/min', system_down_risk: 2, stock_depletion_risk: 5 },
             { label: '10 TXN/min', system_down_risk: 8, stock_depletion_risk: 15 },

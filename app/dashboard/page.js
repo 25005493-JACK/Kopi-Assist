@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 
 // Industry benchmark: net margin ratio vs avg monthly revenue
-// Values represent typical SME net cashflow as a % of revenue in Malaysia
+// Values represent typical F&B net cashflow as a % of revenue in Malaysia
 const INDUSTRY_BENCHMARKS = [
   { keywords: ['retail'],          netRatio: 0.08,  label: 'Retail' },
   { keywords: ['f&b', 'food', 'beverage', 'restaurant', 'cafe'],  netRatio: 0.12, label: 'F&B' },
@@ -24,15 +24,15 @@ const INDUSTRY_BENCHMARKS = [
   { keywords: ['e-commerce', 'ecommerce', 'online shop', 'shopee', 'lazada'], netRatio: 0.14, label: 'E-Commerce' },
   { keywords: ['service', 'consult', 'agency', 'marketing'], netRatio: 0.25, label: 'Services' },
 ];
-const DEFAULT_NET_RATIO = 0.13; // generic SME
+const DEFAULT_NET_RATIO = 0.12; // generic F&B
 
 function getIndustryBenchmark(industryStr) {
-  if (!industryStr) return { netRatio: DEFAULT_NET_RATIO, label: 'SME Average' };
+  if (!industryStr) return { netRatio: DEFAULT_NET_RATIO, label: 'F&B Average' };
   const lower = industryStr.toLowerCase();
   for (const b of INDUSTRY_BENCHMARKS) {
     if (b.keywords.some(k => lower.includes(k))) return b;
   }
-  return { netRatio: DEFAULT_NET_RATIO, label: 'SME Average' };
+  return { netRatio: DEFAULT_NET_RATIO, label: 'F&B Average' };
 }
 
 const CustomTooltip = ({ active, payload, label, industryLabel }) => {

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 export default function ChatBot({ companyId }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'ai', text: 'Hello! I\'m your SME financial advisor. Ask me anything about your business finances, cash flow optimization, or growth strategies.' },
+    { role: 'ai', text: 'Hello! I\'m your F&B financial advisor. Ask me anything about your restaurant or café finances, food cost management, cash flow optimization, or growth strategies.' },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

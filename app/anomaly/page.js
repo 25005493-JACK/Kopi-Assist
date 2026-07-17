@@ -30,10 +30,40 @@ export default function AnomalyPage() {
   const [customAdvice, setCustomAdvice] = useState(null);
   const [loadingCustomAdvice, setLoadingCustomAdvice] = useState(false);
 
+  const [baseRevenue, setBaseRevenue] = useState(25000);
+
   useEffect(() => {
-    if (company) {
-      const rev = Math.round(parseFloat(company.avg_monthly_revenue) || 25000);
-      const exp = Math.round(rev * 0.75);
+    const initCashflow = async () => {
+      if (!company) return;
+      let rev = Math.round(parseFloat(company.avg_monthly_revenue) || 25000);
+      let exp = Math.round(rev * 0.75);
+
+      try {
+        const res = await fetch(`/api/financial/data?company_id=${company.id}&t=${Date.now()}`);
+        const data = await res.json();
+        const results = data.results || [];
+        
+        const monthlyData = {};
+        results.forEach(r => {
+          const month = r.date ? r.date.substring(0, 7) : null;
+          if (!month) return;
+          if (!monthlyData[month]) monthlyData[month] = { income: 0, expenses: 0 };
+          const amt = parseFloat(r.amount) || 0;
+          if (r.type === 'income') monthlyData[month].income += amt;
+          else monthlyData[month].expenses += amt;
+        });
+        const monthEntries = Object.values(monthlyData);
+        if (monthEntries.length > 0) {
+          const actualRevAvg = monthEntries.reduce((s, m) => s + m.income, 0) / monthEntries.length;
+          const actualExpAvg = monthEntries.reduce((s, m) => s + m.expenses, 0) / monthEntries.length;
+          if (actualRevAvg > 0) rev = Math.round(actualRevAvg);
+          if (actualExpAvg > 0) exp = Math.round(actualExpAvg);
+        }
+      } catch (e) {
+        console.error("Error fetching financial data for sandbox:", e);
+      }
+
+      setBaseRevenue(rev);
       const initial = Array.from({ length: 6 }, (_, i) => ({
         month: `Month ${i + 1}`,
         projected_income: rev,
@@ -41,8 +71,11 @@ export default function AnomalyPage() {
         net_cashflow: rev - exp
       }));
       setCustomCashflow(initial);
-    }
+    };
+
+    initCashflow();
   }, [company]);
+
 
   const handleCustomSliderChange = (index, field, value) => {
     setCustomCashflow(prev => {
@@ -352,7 +385,7 @@ export default function AnomalyPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                     {customCashflow.map((m, idx) => {
-                      const maxVal = Math.round((parseFloat(company.avg_monthly_revenue) || 25000) * 3.5);
+                      const maxVal = Math.round(baseRevenue * 3.5);
                       return (
                         <div key={idx} className="card" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', border: '1px solid var(--border-color)' }}>
                           <h4 style={{ margin: '0 0 12px 0', color: 'var(--accent-blue)', display: 'flex', justifyContent: 'space-between' }}>

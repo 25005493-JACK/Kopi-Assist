@@ -31,7 +31,7 @@ export async function POST(request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const prompt = `You are a strategic financial consultant for SMEs. The business owner has manually simulated a custom 6-month cashflow forecast by adjusting income and expenses. 
+    const prompt = `You are a strategic financial consultant for F&B businesses. The business owner has manually simulated a custom 6-month cashflow forecast by adjusting income and expenses. 
 
 Company Profile:
 - Name: ${company.company_name}
@@ -112,24 +112,24 @@ Only return the JSON, no other text.`;
       const actions = [];
       
       if (deficitMonths.length > 0) {
-        actions.push(`Prepare working capital backup for deficit periods: You face a cash deficit in ${deficitMonths[0].month} (Net: RM ${deficitMonths[0].net_cashflow.toLocaleString()}). We advise establishing a short-term invoice financing facility or bank credit line at least 30 days prior.`);
-        actions.push(`Implement strict overhead cost controls: In ${highestExpMonth || 'deficit months'}, your simulated expenses reach RM ${highestExp.toLocaleString()}. Audit discretionary operational spending (packaging, logistics, utilities) to trim expenses by at least 15% during high-outflow periods.`);
+        actions.push(`Secure a short-term ingredient financing facility or food-distributor credit line before deficit hits: You face a cash deficit in ${deficitMonths[0].month} (Net: RM ${deficitMonths[0].net_cashflow.toLocaleString()}). Approach your primary food distributor for 30-day credit terms on dry goods, and set up a standby overdraft facility with your business bank to cover payroll and rent during the low-cash period.`);
+        actions.push(`Implement a food cost audit during high-outflow periods: In ${highestExpMonth || 'deficit months'}, your simulated expenses reach RM ${highestExp.toLocaleString()}. Conduct a full plate-costing review — target a food cost ratio of 28–35% of revenue. Eliminate low-margin menu items and renegotiate ingredient prices with Pasar Borong distributors to reduce COGS by at least 10–15%.`);
       } else {
-        actions.push(`Capitalize on cash surpluses: Since your simulated cash flow is consistently positive, we recommend placing RM ${(cumulativeNet * 0.3).toFixed(0)} of your cumulative surplus into liquid cash deposits or interest-bearing flexi-accounts.`);
-        actions.push(`Accelerate supplier settlements: Negotiate early-payment discounts (e.g. 2/10 Net 30) with key inventory vendors to reduce unit purchase costs, leveraging your healthy cash balances.`);
+        actions.push(`Deploy surplus capital into kitchen capacity and menu development: Since your simulated cash flow is consistently positive, allocate RM ${(cumulativeNet * 0.3).toFixed(0)} of cumulative surplus into upgrading high-utilisation kitchen equipment (e.g. commercial fryers, blast chillers) that reduce prep time and food waste, directly improving throughput per service.`);
+        actions.push(`Lock in better ingredient pricing now: Use your healthy cash position to negotiate bulk prepayment deals with key food distributors (e.g. 3-month advance purchase of dry goods at a 10–15% discount), reducing future variable costs and protecting margins against ingredient price inflation.`);
       }
 
-      actions.push(`Synchronize receivables and payables: Ensure client payment terms are shorter than your supplier payment cycles (e.g., invoice clients on Net 15, while paying vendors on Net 30) to maintain a positive float.`);
+      actions.push(`Tighten delivery platform receivables: Ensure your GrabFood, Shopee Food, and Food Panda payout cycles are reconciled weekly — platform payouts can lag up to 14 days, creating a cash gap if not tracked. Set your internal cash forecast to account for this delivery-revenue delay when planning ingredient procurement and payroll schedules.`);
 
       // Heuristic consequence
       let consequence = '';
       if (deficitMonths.length >= 2) {
         const projectedLoss = Math.abs(deficitMonths.reduce((s, m) => s + m.net_cashflow, 0));
-        consequence = `If this trajectory continues for 3 months without intervention, the business will accumulate a cash shortfall of approximately RM ${projectedLoss.toLocaleString()}, exhausting operating reserves and likely triggering delayed supplier payments. Persistent deficits will damage the company's credit profile, making emergency financing more expensive or inaccessible when most needed. Without corrective action, the business risks entering a debt spiral that constrains operations even after the deficit period ends.`;
+        consequence = `If this cashflow trajectory continues for 3 months without intervention, ${name} will face a cumulative cash shortfall of approximately RM ${projectedLoss.toLocaleString()}, making it increasingly difficult to meet weekly ingredient procurement costs and bi-monthly payroll obligations. F&B businesses operating at a cash deficit risk being placed on cash-on-delivery terms by food distributors, eliminating credit flexibility and forcing the kitchen to operate with reduced ingredient variety. Without corrective action — either through menu cost engineering, delivery platform promotion spend, or a credit facility — the outlet risks temporary closure or forced staff reduction.`;
       } else if (deficitMonths.length === 1) {
-        consequence = `Sustaining this cashflow curve for 3 months will result in at least one deficit period that draws down reserves by RM ${Math.abs(deficitMonths[0].net_cashflow).toLocaleString()}, creating pressure on operational liquidity. If the deficit month coincides with a high-obligation period (e.g. payroll, rent, supplier due dates), the business may face payment delays that damage vendor relationships. Proactive bridging financing or expense cuts can prevent this single weakness from escalating into a broader cash crisis.`;
+        consequence = `Sustaining this cashflow curve for 3 months will produce at least one cash-negative period, drawing down reserves by RM ${Math.abs(deficitMonths[0].net_cashflow).toLocaleString()}. If this deficit month aligns with a high-obligation week (e.g. month-end rent, quarterly equipment maintenance, or festive ingredient pre-ordering), the kitchen may be forced to delay supplier payments — jeopardising delivery priority and freshness of produce. Proactive action — such as running a targeted delivery platform promotion that month to boost order volume — can prevent this single dip from escalating.`;
       } else {
-        consequence = `Maintaining this positive cashflow curve for 3 months without deploying surplus capital means RM ${Math.round(cumulativeNet * 0.5).toLocaleString()} or more will sit idle, generating no returns. Idle cash carries an opportunity cost — competitors investing in inventory, marketing, or equipment will compound their advantage over this period. Redirecting even 30% of the projected surplus into growth initiatives or high-yield instruments would materially improve the business's long-term position.`;
+        consequence = `Maintaining this positive F&B cashflow curve for 3 months without reinvesting surplus capital means the business is leaving significant value on the table. Idle cash in an F&B context carries an opportunity cost — competitors investing in kitchen equipment upgrades, staff training, or platform marketing will compound their throughput and customer rating advantages. Redirecting even 30% of the projected surplus (RM ${Math.round(cumulativeNet * 0.3).toLocaleString()}) into menu R&D, a new outlet trial, or a delivery platform promotional fund would materially improve long-term revenue velocity.`;
       }
 
       return NextResponse.json({ success: true, summary, actions, consequence });

@@ -44,7 +44,7 @@ export async function POST(request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const prompt = `As a financial advisor for SMEs, analyze this company's data and provide 5 specific, actionable recommendations to improve their financial health.
+    const prompt = `As a financial advisor for F&B businesses, analyze this company's data and provide 5 specific, actionable recommendations to improve their financial health. Focus on F&B-specific insights such as food cost ratios, kitchen labor efficiency, delivery platform commissions, ingredient procurement, and waste reduction.
 
 Company: ${company.company_name}
 Industry: ${company.industry}

@@ -40,7 +40,7 @@ export async function POST(request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const prompt = `You are a professional financial analyst. Generate a comprehensive annual financial report for this SME company.
+    const prompt = `You are a professional financial analyst. Generate a comprehensive annual financial report for this F&B company.
 
 Company Info:
 - Name: ${company.company_name}
@@ -219,7 +219,7 @@ Breakdown of income by collection platform/payment method:
 7. KEY FINANCIAL HEALTH RATIOS
 ------------------------------------------------------------------------
 - Profit Margin: ${totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : '0'}%
-  (Percentage of sales turned into profit. A margin above 15% is healthy for ${company.industry || 'SMEs'}.)
+  (Percentage of sales turned into profit. A margin above 15% is healthy for F&B companies; typical F&B net margins range from 10–15%.)
 - Expense Coverage Multiplier: ${totalExpense > 0 ? (totalIncome / totalExpense).toFixed(2) : 'N/A'}x
   (Ability of income streams to cover current operational costs.)
 - Employee Efficiency Index: RM ${(company.headcount > 0 ? totalIncome / company.headcount : totalIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })} revenue generated per headcount.
