@@ -26,7 +26,7 @@ Kopi-Assist solves all three problems in a single, unified platform by connectin
 - **Interactive Financial Dashboard** - Monthly cash flow charts with net flow tracking, industry benchmark overlays, and 1-month AI forecast projection computed from a 3-month rolling moving average.
 - **Real-Time Anomaly & Leakage Detection** - Hybrid heuristic + Gemini AI scanning engine that detects suspicious claims, duplicate billings, vague miscellaneous charges, atypical asset purchases, and near-duplicate utility bills within 48 hours.
 - **Predictive Scenario Planner & Interactive Sandbox** - AI-generated 6-month cash flow simulations for 7 operational risk scenarios (Festive Season, MCO Lockdown, Economic Downturn, Supply Chain Disruption, Platform Shutdown, IT System Outage, Operational Overload), plus a manual slider sandbox for custom financial projections.
-- **Frictionless Data Management** - API-first Baserow integration with multi-format file upload (CSV, TXT, PNG, JPG) powered by Gemini OCR, PapaParse, and a regex fallback engine, alongside an E-Invoice PDF generator and Annual Report exporter.
+- **Frictionless Data Management** - API-first Baserow integration with multi-format file upload (CSV, TXT, PNG, JPG) powered by Gemini OCR, PapaParse, and a regex fallback engine, alongside an E-Invoice and Receipt PDF generator and Annual Report exporter.
 - **Multi-Lingual AI Chatbot** - Embedded conversational AI financial advisor supporting English, Bahasa Melayu, and Chinese, with context-aware advice grounded in live company transaction data.
 
 ### Key Technologies
@@ -95,7 +95,7 @@ To build an accessible, AI-powered financial health platform that enables Malays
 
 **Phase 1 - Foundation & Data Layer**
 
-The project begins with establishing the core data layer using Baserow, a self-hosted-compatible API-first no-code database. Two primary tables are structured: a companies table (company name, industry, headcount, average monthly revenue, outlet count, hashed password) and a financial_transactions table (date, type, category, amount, description, source file, PIC tag, voucher code). Next.js Serverless API Routes serve as the backend, authenticating against Baserow via token-based REST calls. bcryptjs handles secure password hashing for the SME login and register flow.
+The project begins with establishing the core data layer using Baserow, a self-hosted-compatible API-first no-code database. Three primary tables are structured: (1) a companies table (company name, industry, headcount, average monthly revenue, outlet count, hashed password); (2) a financial_transactions table (date, type, category, amount, description, source file, PIC tag, voucher code); and (3) a menu table (storing menu item names and pricing parsed from the uploaded menu file during registration, used to validate and cross-reference sales). Next.js Serverless API Routes serve as the backend, authenticating against Baserow via token-based REST calls. bcryptjs handles secure password hashing for the SME login and register flow.
 
 **Phase 2 - Dashboard & Benchmarking**
 
@@ -169,22 +169,22 @@ End-to-end testing is performed using two embedded mock datasets. Jack Enterpris
 | SQL Account | Desktop-installed ERP. Complex setup, no AI integration, no cloud-first architecture. |
 | Bank SME Dashboards | Limited to one bank's transaction history. No cross-source aggregation, no anomaly scan, no scenario modelling. |
 
-**What Makes Kopi-Assist Unique:**
+**What Makes Kopi-Assist Unique (Compared to Competitors):**
 
-1. **AI-First with Deterministic Fallbacks:** Every major feature - anomaly detection, scenario prediction, file parsing, chatbot advice - is powered by Gemini AI with fully coded deterministic fallbacks, making the platform resilient and always-on even without live API access.
+1. **AI-First with Deterministic Fallbacks vs. Static Rules:** Unlike traditional desktop accounting systems (such as SQL Account) or cloud accounting platforms (like QuickBooks/Xero) which rely entirely on manual data entry and static business rules, Kopi-Assist utilizes Google Gemini AI to analyze logs and transaction context. If the AI model faces API rate limits or internet connectivity drops, Kopi-Assist switches to fully-coded heuristic fallbacks—an architecture lacking in static competitors.
 
-2. **F&B & Retail Specificity:** Industry benchmark net margins are coded for 10 Malaysian sectors. The scenario planner includes F&B-specific risks such as Shopee Food platform shutdown, POS system overload at peak hours, and supply chain stuns. The OCR parser handles food delivery platform export formats including FoodPanda, GrabFood, and Shopee Food CSVs.
+2. **F&B & Retail Specificity vs. Generalist Ledger Systems:** General accounting software (Xero or Wave) are generalist ledger systems requiring extensive setup of charts of accounts, and POS systems (like StoreHub) focus strictly on checkout operations. Kopi-Assist is pre-configured with Malaysian F&B and Retail sector benchmark net margins. Its scenario planner natively models sector-specific events (e.g. food delivery platform MCO restrictions, GrabFood/FoodPanda surges), and its OCR parser is built to recognize raw formats from Shopee Food, FoodPanda, and Grab delivery logs.
 
-3. **Malaysian Localisation:** Three-language support (English, Bahasa Melayu, Chinese) with Malaysian Ringgit throughout all currency displays, benchmarks, and AI prompts. No other AI financial tool on the Malaysian SME market offers this combination.
+3. **Malaysian Localisation vs. US/Euro-Centric Apps:** Apps like Wave are heavily US-centric, and Xero/QuickBooks lack standard Bahasa Melayu support. Kopi-Assist is fully translated in English, Bahasa Melayu, and Mandarin Chinese. All dashboard charts, currency displays, AI advice prompts, and benchmark margins are hardcoded using Malaysian Ringgit (RM) and tailored to the local Malaysian macroeconomic climate.
 
-4. **Zero Infrastructure Cost for Early Adoption:** Built on Vercel free tier, Baserow free tier, and Gemini API. SMEs can begin using Kopi-Assist with no upfront investment in hardware, software licenses, or database hosting.
+4. **Zero Infrastructure Cost vs. High Software Licenses:** Desktop ERP systems (like SQL Account) require upfront installation fees and hardware, and cloud subscriptions (Xero/QuickBooks) cost RM 50-250 per month. Kopi-Assist runs entirely on Vercel free tier, Baserow cloud database free tier, and free-tier Gemini API, allowing micro-SMEs to deploy a complete financial dashboard and anomaly engine with zero upfront cost.
 
-5. **PIC Accountability Tracking:** Every anomaly card explicitly identifies the Person-in-Charge extracted from the transaction description using regex pattern matching on the [PIC: Name] tag embedded at upload time. This enables immediate internal accountability and is absent from all competing platforms.
+5. **PIC Accountability Tracking vs. Raw Bank Statements:** While bank SME dashboards only display chronological transactions with no contextual metadata, and accounting systems record transactions at a ledger level, Kopi-Assist parses the Person-in-Charge (PIC) from receipt/invoice descriptions and displays it alongside the anomaly flag. This allows business owners to instantly trace cost leakage to a specific employee or cashier.
 
 ### 5.2 Target Users
 
 **Primary Users - SME Owners / Business Operators**
-F&B entrepreneurs operating cafes, bubble tea chains, or restaurants with 5-50 staff. Retail shop owners in fashion, consumer goods, or hardware categories operating in Malaysia. These owners log in, upload monthly transaction files or manage live Baserow-connected data, and use the dashboard and anomaly scanner weekly to monitor financial health and catch irregularities early.
+F&B entrepreneurs operating cafes, bubble tea chains, or restaurants with 5-50 staff. These owners log in, upload monthly transaction files or manage live Baserow-connected data, and use the dashboard and anomaly scanner weekly to monitor financial health and catch irregularities early.
 
 **Secondary Users - Finance Managers / Bookkeepers**
 In-house finance staff or outsourced accountants managing the financial records of multiple SME clients. They benefit from the E-Invoice generator, Annual Report PDF export, bulk CSV upload, and the anomaly report as supporting documentation for audit preparation and client reporting.
