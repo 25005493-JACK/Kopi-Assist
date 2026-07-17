@@ -37,6 +37,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
+    console.log('POST API payload received:', JSON.stringify(body));
     const { company_id, records } = body;
 
     if (!company_id || !records || !records.length) {
@@ -58,15 +59,18 @@ export async function POST(request) {
             date: record.date || new Date().toISOString().split('T')[0],
             type: record.type || '',
             category: record.category || '',
-            amount: parseFloat(record.amount) || 0,
+            amount: Math.round((parseFloat(record.amount) || 0) * 100) / 100,
             description: record.description || '',
             source: record.source || 'manual',
-            voucher_code: record.voucher_code || '',
+            "voucher code": record.voucher_code || record['voucher code'] || '',
           }),
         }
       );
       if (res.ok) {
         results.push(await res.json());
+      } else {
+        const errorText = await res.text();
+        console.error('Baserow POST row insertion failed:', errorText);
       }
     }
 

@@ -60,7 +60,7 @@ export default function Sidebar({ company, onLogout }) {
           </div>
           <div>
             <div className="company-name">{company?.company_name || 'Company'}</div>
-            <div className="company-industry">{company?.industry || 'Industry'}</div>
+            <div className="company-industry">{(company?.industry?.split('|')[0]) || 'Industry'}</div>
           </div>
         </div>
         <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: '8px', justifyContent: 'center' }} onClick={onLogout}>

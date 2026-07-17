@@ -19,6 +19,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Company not found or deleted' }, { status: 404 });
     }
     const company = await compRes.json();
+    if (company.industry) {
+      company.industry = company.industry.split('|')[0];
+    }
 
     // Fetch financial data
     let allRows = [];

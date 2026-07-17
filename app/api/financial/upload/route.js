@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import Papa from 'papaparse';
 
 const BASEROW_URL = process.env.BASEROW_BASE_URL;
 const TABLE_ID = process.env.BASEROW_FINANCIAL_TABLE_ID;
@@ -47,34 +48,45 @@ export async function POST(request) {
       return NextResponse.json({ error: parseErr.message }, { status: 500 });
     }
 
-    // Save to Baserow
+    // Save to Baserow in batches of 200
     const saved = [];
-    for (const record of records) {
+    const itemsToSave = records.map(record => {
       const pic = record.person_in_charge || 'Jack';
       const description = record.description || '';
       const finalDesc = description.includes('[PIC:') ? description : `${description} [PIC: ${pic}]`.trim();
+      return {
+        company_id: parseInt(companyId),
+        date: record.date || new Date().toISOString().split('T')[0],
+        type: record.type || 'expense',
+        category: record.category || 'Uncategorized',
+        amount: Math.round((parseFloat(record.amount) || 0) * 100) / 100,
+        description: finalDesc,
+        source: file.name,
+        "voucher code": record.voucher_code || record['voucher code'] || '',
+      };
+    });
 
+    for (let i = 0; i < itemsToSave.length; i += 200) {
+      const batch = itemsToSave.slice(i, i + 200);
       const res = await fetch(
-        `${BASEROW_URL}/api/database/rows/table/${TABLE_ID}/?user_field_names=true`,
+        `${BASEROW_URL}/api/database/rows/table/${TABLE_ID}/batch/?user_field_names=true`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Token ${TOKEN}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            company_id: parseInt(companyId),
-            date: record.date || new Date().toISOString().split('T')[0],
-            type: record.type || 'expense',
-            category: record.category || 'Uncategorized',
-            amount: parseFloat(record.amount) || 0,
-            description: finalDesc,
-            source: file.name,
-            voucher_code: record.voucher_code || '',
-          }),
+          body: JSON.stringify({ items: batch }),
         }
       );
-      if (res.ok) saved.push(await res.json());
+      if (res.ok) {
+        const resData = await res.json();
+        saved.push(...(resData.items || []));
+      } else {
+        const errText = await res.text();
+        console.error('Batch insert failed:', errText);
+        throw new Error(`Baserow batch insertion failed: ${errText}`);
+      }
     }
 
     return NextResponse.json({ success: true, count: saved.length, records: saved, warning });
@@ -83,30 +95,67 @@ export async function POST(request) {
   }
 }
 
-function parseCSVText(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
+function normalizeDate(dateStr) {
+  if (!dateStr) return '';
+  const clean = dateStr.trim();
+  
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return clean;
+  }
+  
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(clean)) {
+    return clean.replace(/\//g, '-');
+  }
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/["']/g, ''));
+  const parts = clean.split(/[-/]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      const y = parts[0];
+      const m = parts[1].padStart(2, '0');
+      const d = parts[2].padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    if (parts[2].length === 4) {
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      const y = parts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  try {
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+  } catch (e) {}
+
+  return clean;
+}
+
+function parseCSVText(text) {
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  const rows = parsed.data || [];
   const records = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/["']/g, ''));
-    if (values.length < 2) continue;
+  for (const row of rows) {
+    const normalisedRow = {};
+    Object.keys(row).forEach(key => {
+      normalisedRow[key.trim().toLowerCase().replace(/["']/g, '')] = row[key];
+    });
 
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+    if (Object.keys(normalisedRow).length < 2) continue;
 
-    const pic = row.person_in_charge || row.pic || 'Jack';
+    const pic = normalisedRow.person_in_charge || normalisedRow.pic || 'Jack';
 
     records.push({
-      date: row.date || new Date().toISOString().split('T')[0],
-      type: (row.type || 'expense').toLowerCase(),
-      category: row.category || 'Uncategorized',
-      amount: parseFloat(row.amount) || 0,
-      description: row.description || row.desc || '',
+      date: normalizeDate(normalisedRow.date) || new Date().toISOString().split('T')[0],
+      type: (normalisedRow.type || 'expense').toLowerCase(),
+      category: normalisedRow.category || 'Uncategorized',
+      amount: parseFloat(normalisedRow.amount) || 0,
+      description: normalisedRow.description || normalisedRow.desc || '',
       person_in_charge: pic,
-      voucher_code: row.voucher_code || row.voucher || '',
+      voucher_code: normalisedRow.voucher_code || normalisedRow.voucher || '',
     });
   }
 

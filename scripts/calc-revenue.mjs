@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const outDir = 'e:/Hack Attack 3 fnb/SME-Assist-main/Data/Oriental Tea FnB';
+const outDir = 'e:/Hack Attack 3 fnb/Kopi Assist/Data/Oriental Tea FnB';
 const files = [
   'Oriental_Tea_General_2026.csv',
   'Oriental_Tea_ShopeeFood_2026.csv',

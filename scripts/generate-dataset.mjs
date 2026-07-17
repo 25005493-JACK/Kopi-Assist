@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const outDir = 'e:/Hack Attack 3 fnb/SME-Assist-main/Data/Oriental Tea FnB';
+const outDir = 'e:/Hack Attack 3 fnb/Kopi Assist/Data/Oriental Tea FnB';
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }

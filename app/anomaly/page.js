@@ -472,25 +472,6 @@ export default function AnomalyPage() {
                       ))}
                     </ul>
 
-                    {opFailureData.consequence && (
-                      <div style={{
-                        background: 'rgba(255, 61, 113, 0.07)',
-                        border: '1px solid rgba(255, 61, 113, 0.3)',
-                        borderLeft: '4px solid var(--accent-red)',
-                        borderRadius: '8px',
-                        padding: '14px 16px',
-                        marginBottom: '20px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '1rem' }}>⏳</span>
-                          <strong style={{ color: 'var(--accent-red)', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>If No Action Taken — 3 Month Consequence</strong>
-                        </div>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.6', fontStyle: 'italic' }}>
-                          {opFailureData.consequence}
-                        </p>
-                      </div>
-                    )}
-
                     {opFailureData.system_load?.length > 0 && (
                       <div>
                         <div className="section-title" style={{ fontSize: '0.85rem' }}>📊 System Down & Stock Insufficient Risk vs Transaction Load</div>
@@ -627,7 +608,10 @@ export default function AnomalyPage() {
                 <div>
                   <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>🛑 Anomaly Threshold</strong>
                   <code style={{ display: 'block', background: 'rgba(255,61,113,0.1)', color: 'var(--accent-red)', padding: '6px 10px', borderRadius: '4px', fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                    &gt; RM {typeof selectedAnomaly.threshold === 'number' ? selectedAnomaly.threshold.toLocaleString(undefined, {minimumFractionDigits: 2}) : selectedAnomaly.threshold || 'N/A'}
+                    {selectedAnomaly.type === 'duplicate' || selectedAnomaly.type === 'duplicate_voucher'
+                      ? `> ${selectedAnomaly.threshold} occurrence`
+                      : `> RM ${typeof selectedAnomaly.threshold === 'number' ? selectedAnomaly.threshold.toLocaleString(undefined, {minimumFractionDigits: 2}) : selectedAnomaly.threshold || 'N/A'}`
+                    }
                   </code>
                 </div>
               </div>

@@ -3,11 +3,31 @@ import { useState, useEffect } from 'react';
 import { useI18n } from '../context/i18nContext';
 
 const OUTLETS = ['Taman A', 'Taman B', 'Taman C', 'Taman D', 'Taman E'];
-const PAYMENT_METHODS = ['Cash', 'Card', 'QR / DuitNow', 'Shopee Food', 'Food Panda', 'GrabFood', 'Touch \'n Go'];
+const PAYMENT_METHODS = ['Cash', 'Card', 'QR / DuitNow', 'Touch \'n Go'];
 
 export default function InvoiceForm({ company, onInvoiceGenerated }) {
   const { t } = useI18n();
   const [mode, setMode] = useState('b2b'); // 'b2b' | 'b2c'
+
+  // Parse custom outlet count from industry
+  const baseOutlets = ['Taman A', 'Taman B', 'Taman C', 'Taman D', 'Taman E'];
+  let numOutlets = 5;
+  if (company?.industry && company.industry.includes('|')) {
+    const parts = company.industry.split('|');
+    const parsed = parseInt(parts[1]);
+    if (!isNaN(parsed) && parsed > 0) {
+      numOutlets = parsed;
+    }
+  }
+
+  const outletsList = [];
+  for (let i = 0; i < numOutlets; i++) {
+    if (i < baseOutlets.length) {
+      outletsList.push(baseOutlets[i]);
+    } else {
+      outletsList.push(`Outlet ${String.fromCharCode(65 + i)}`); // Outlet F, G, H, etc.
+    }
+  }
 
   // ── B2B state ──────────────────────────────────────────────
   const [b2bForm, setB2bForm] = useState({
@@ -18,7 +38,7 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
 
   // ── B2C state ──────────────────────────────────────────────
   const [b2cForm, setB2cForm] = useState({
-    outlet: OUTLETS[0],
+    outlet: outletsList[0] || 'Taman A',
     pax: 1,
     items: [],       // { menuItem: {Item_Name, Active}, quantity }
     voucherCode: '',
@@ -37,7 +57,7 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
     setMenuLoading(true);
     fetch(`/api/menu?company_id=${company.id}`)
       .then(r => r.json())
-      .then(d => setMenuItems(d.items || []))
+      .then(d => setMenuItems(d.results || d.items || []))
       .catch(() => {})
       .finally(() => setMenuLoading(false));
   }, [mode, company?.id]);
@@ -124,17 +144,27 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
       doc.text(`Total: RM ${b2bTotal.toFixed(2)}`, 140, finalY + 20);
 
-      if (b2bForm.notes) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-        doc.text('Notes:', 20, finalY);
-        doc.text(doc.splitTextToSize(b2bForm.notes, 100), 20, finalY + 8);
-      }
+      const notesToPrint = b2bForm.notes || 'other payment methods';
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      doc.text('Notes:', 20, finalY);
+      doc.text(doc.splitTextToSize(notesToPrint, 100), 20, finalY + 8);
       doc.save(`${invoiceNo}.pdf`);
 
       await fetch('/api/financial/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company_id: company.id, records: [{ date: new Date().toISOString().split('T')[0], type: 'income', category: 'Sales', amount: b2bTotal, description: `E-Invoice B2B: ${invoiceNo} to ${b2bForm.clientName || 'Client'}`, source: 'E-Invoice B2B' }] }),
+        body: JSON.stringify({ company_id: company.id, records: [{ date: new Date().toISOString().split('T')[0], type: 'income', category: 'Sales', amount: parseFloat(b2bTotal.toFixed(2)), description: `E-Invoice B2B: ${invoiceNo} to ${b2bForm.clientName || 'Client'}`, source: 'E-Invoice B2B' }] }),
       });
+
+      // Clear B2B form state after generation
+      setB2bForm({
+        clientName: '',
+        clientAddress: '',
+        paymentTerms: 'COD',
+        tax: 6,
+        notes: '',
+        items: [{ description: '', quantity: 1, unitPrice: 0 }],
+      });
+
       if (onInvoiceGenerated) onInvoiceGenerated();
     } catch (err) { alert('Error: ' + err.message); }
     setGenerating(false);
@@ -220,13 +250,26 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
             date: now.toISOString().split('T')[0],
             type: 'income',
             category: 'Sales',
-            amount: b2cTotal,
+            amount: parseFloat(b2cTotal.toFixed(2)),
             description: `B2C Receipt ${receiptNo} | Outlet: ${b2cForm.outlet} | Pax: ${b2cForm.pax} | Pay: ${b2cForm.paymentMethod}${b2cForm.voucherCode ? ' | Voucher: ' + b2cForm.voucherCode : ''}`,
             source: `B2C Receipt - ${b2cForm.outlet}`,
             voucher_code: b2cForm.voucherCode || '',
           }],
         }),
       });
+
+      // Clear B2C form state after generation
+      setB2cForm({
+        outlet: outletsList[0] || 'Taman A',
+        pax: 1,
+        items: [],
+        voucherCode: '',
+        voucherDiscount: 0,
+        serviceCharge: 10,
+        tax: 6,
+        paymentMethod: 'Cash',
+      });
+
       if (onInvoiceGenerated) onInvoiceGenerated();
     } catch (err) { alert('Error: ' + err.message); }
     setGenerating(false);
@@ -318,7 +361,7 @@ export default function InvoiceForm({ company, onInvoiceGenerated }) {
             <div className="form-group">
               <label className="form-label">🏪 Outlet</label>
               <select className="form-input" value={b2cForm.outlet} onChange={e => setB2cForm(f => ({ ...f, outlet: e.target.value }))}>
-                {OUTLETS.map(o => <option key={o} value={o}>{o}</option>)}
+                {outletsList.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div className="form-group">

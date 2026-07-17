@@ -35,9 +35,10 @@ export async function POST(request) {
 3. Duplicate transactions (same amount, same description, same day)
 4. Irregular patterns or unexpected category spending
 5. Duplicate voucher codes: if the same voucher_code value appears in multiple income records, flag ALL occurrences after the first as duplicates
+6. Near-duplicate utility bills: if two utility transactions appear within 48 hours of each other with similar amounts (within RM 100), flag only the LATER (2nd) transaction as a duplicate — the first is considered the original valid charge.
 
 Financial Records:
-${JSON.stringify(allRows.map(r => ({ id: r.id, date: r.date, type: r.type, category: r.category, amount: r.amount, description: r.description, voucher_code: r.voucher_code })), null, 2)}
+${JSON.stringify(allRows.map(r => ({ id: r.id, date: r.date, type: r.type, category: r.category, amount: r.amount, description: r.description, voucher_code: r['voucher code'] || r.voucher_code || '' })), null, 2)}
 
 Return a JSON array of anomalies found. For EACH anomaly, you must provide:
 - id: the record id
@@ -69,7 +70,6 @@ Only return the JSON array, no other text. If no anomalies found, return empty a
       console.warn("AI Anomaly Scan failed, returning rule-based fallback anomalies:", aiErr.message);
       
       const anomalies = [];
-      const descriptions = new Set();
       const categoryTotals = {};
       const categoryCounts = {};
       
@@ -153,16 +153,39 @@ Only return the JSON array, no other text. If no anomalies found, return empty a
         }
 
         // Rule 4: Detect duplicate/near-duplicate Utility postings within a narrow timeframe
+        // Only the later (2nd) transaction in the pair is flagged as the anomaly.
         if (r.category?.toLowerCase() === 'utilities') {
-          // Look for other utility bills within 2 days with close amounts
-          const closeBill = allRows.find(other => 
-            other.id !== r.id &&
-            other.category === r.category &&
-            Math.abs(new Date(other.date) - new Date(r.date)) <= 2 * 24 * 60 * 60 * 1000 &&
-            Math.abs(parseFloat(other.amount) - amt) <= 100
-          );
+          // Look for other utility bills within 2 days with close amounts and matching utility/outlet details
+          const closeBill = allRows.find(other => {
+            if (other.id === r.id || other.category !== r.category) return false;
+            
+            const rDesc = (r.description || '').toLowerCase();
+            const otherDesc = (other.description || '').toLowerCase();
+            
+            // Check if they are of the same utility type (e.g. both electricity or both water)
+            const bothElec = rDesc.includes('electricity') && otherDesc.includes('electricity');
+            const bothWater = rDesc.includes('water') && otherDesc.includes('water');
+            const sameType = bothElec || bothWater;
+            
+            // Check if they are for the same outlet/branch (e.g. both Taman A, both Taman B, etc.)
+            let sameOutlet = false;
+            const outlets = ['taman a', 'taman b', 'taman c', 'taman d', 'taman e'];
+            for (const o of outlets) {
+              if (rDesc.includes(o) && otherDesc.includes(o)) {
+                sameOutlet = true;
+                break;
+              }
+            }
+            
+            // If neither type nor outlet is specified, default to matching descriptions for fallback safety
+            const isMatch = (rDesc === otherDesc) || (sameType && sameOutlet);
+            
+            return isMatch &&
+              Math.abs(new Date(other.date) - new Date(r.date)) <= 2 * 24 * 60 * 60 * 1000 &&
+              Math.abs(parseFloat(other.amount) - amt) <= 100;
+          });
           if (closeBill && new Date(r.date) >= new Date(closeBill.date)) {
-            // Only add once (for the later one)
+            // Only flag the later (2nd) transaction
             anomalies.push({
               id: r.id,
               type: "duplicate",
@@ -184,7 +207,7 @@ Only return the JSON array, no other text. If no anomalies found, return empty a
         // Rule 5: Duplicate voucher code
         const voucherMap = {};
         allRows.forEach(r => {
-          const code = (r.voucher_code || '').trim();
+          const code = (r['voucher code'] || r.voucher_code || '').trim();
           if (!code) return;
           if (!voucherMap[code]) voucherMap[code] = [];
           voucherMap[code].push(r);

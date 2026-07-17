@@ -51,7 +51,7 @@ const CustomTooltip = ({ active, payload, label, industryLabel }) => {
           Net Flow: {net >= 0 ? '+' : ''}RM {net.toLocaleString()}
         </p>
         {avgNet !== undefined && (
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#ffd700', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#00a8ff', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
             {industryLabel} Avg Net: RM {Math.round(avgNet).toLocaleString()}
           </p>
         )}
@@ -198,7 +198,7 @@ export default function DashboardPage() {
   }
 
   // Industry benchmark overlay
-  const benchmark = getIndustryBenchmark(company.industry);
+  const benchmark = getIndustryBenchmark(company.industry?.split('|')[0]);
   const avgMonthlyRevenue = parseFloat(company.avg_monthly_revenue) || 25000;
   const industryAvgNet = Math.round(avgMonthlyRevenue * benchmark.netRatio);
   chartData.forEach(d => { d.industryAvg = industryAvgNet; });
@@ -305,12 +305,12 @@ export default function DashboardPage() {
             {company.industry && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'rgba(255, 215, 0, 0.08)',
-                border: '1px solid rgba(255, 215, 0, 0.25)',
+                background: 'rgba(0, 168, 255, 0.08)',
+                border: '1px solid rgba(0, 168, 255, 0.25)',
                 borderRadius: '8px', padding: '6px 12px', fontSize: '0.78rem'
               }}>
-                <span style={{ display: 'inline-block', width: '24px', borderTop: '2px dashed #ffd700' }} />
-                <span style={{ color: '#ffd700' }}>
+                <span style={{ display: 'inline-block', width: '24px', borderTop: '2px dashed #00a8ff' }} />
+                <span style={{ color: '#00a8ff' }}>
                   {benchmark.label} Industry Avg Net — RM {industryAvgNet.toLocaleString()}/mo
                 </span>
               </div>
@@ -327,17 +327,6 @@ export default function DashboardPage() {
                   <YAxis stroke="#5a826a" fontSize={12} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
                   <Tooltip content={<CustomTooltip industryLabel={benchmark.label} />} />
                   <Legend />
-                  <Bar dataKey="income" name="Income" fill="#00e676" radius={[4, 4, 0, 0]}>
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-inc-${index}`}
-                        fill={entry.isProjected ? 'rgba(0, 230, 118, 0.45)' : '#00e676'}
-                        stroke={entry.isProjected ? '#00e676' : 'none'}
-                        strokeWidth={entry.isProjected ? 1.5 : 0}
-                        strokeDasharray={entry.isProjected ? '3 3' : 'none'}
-                      />
-                    ))}
-                  </Bar>
                   <Bar dataKey="expenses" name="Expenses" fill="#ff3d71" radius={[4, 4, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell
@@ -349,11 +338,22 @@ export default function DashboardPage() {
                       />
                     ))}
                   </Bar>
+                  <Bar dataKey="income" name="Income" fill="#00e676" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-inc-${index}`}
+                        fill={entry.isProjected ? 'rgba(0, 230, 118, 0.45)' : '#00e676'}
+                        stroke={entry.isProjected ? '#00e676' : 'none'}
+                        strokeWidth={entry.isProjected ? 1.5 : 0}
+                        strokeDasharray={entry.isProjected ? '3 3' : 'none'}
+                      />
+                    ))}
+                  </Bar>
                   <Line
                     type="monotone"
                     dataKey="net"
                     name="Net Flow"
-                    stroke="#ffd700"
+                    stroke="#00a8ff"
                     strokeWidth={2.5}
                     dot={(props) => {
                       const { cx, cy, payload } = props;
@@ -361,22 +361,22 @@ export default function DashboardPage() {
                         <circle
                           key={`dot-net-${cx}`}
                           cx={cx} cy={cy} r={4}
-                          fill={payload.net >= 0 ? '#ffd700' : '#ffaa00'}
+                          fill={payload.net >= 0 ? '#00a8ff' : '#007bc0'}
                           stroke="none"
                         />
                       );
                     }}
-                    activeDot={{ r: 6, fill: '#ffd700' }}
+                    activeDot={{ r: 6, fill: '#00a8ff' }}
                   />
                   <Line
                     type="monotone"
                     dataKey="industryAvg"
-                    name={`${benchmark.label} Industry Avg Net`}
-                    stroke="#ffd700"
+                    name="Average Industry Net Flow"
+                    stroke="#00a8ff"
                     strokeWidth={2}
                     strokeDasharray="6 3"
                     dot={false}
-                    activeDot={{ r: 4, fill: '#ffd700' }}
+                    activeDot={{ r: 4, fill: '#00a8ff' }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>

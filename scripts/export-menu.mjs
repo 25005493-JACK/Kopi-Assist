@@ -64,7 +64,7 @@ async function main() {
 
   const csvContent = csvLines.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
   
-  const destDir = 'e:/Hack Attack 3 fnb/SME-Assist-main/Data/Oriental Tea FnB';
+  const destDir = 'e:/Hack Attack 3 fnb/Kopi Assist/Data/Oriental Tea FnB';
   fs.mkdirSync(destDir, { recursive: true });
   fs.writeFileSync(path.join(destDir, 'Oriental_Tea_Menu.csv'), csvContent);
   console.log(`✅ Menu successfully exported to ${path.join(destDir, 'Oriental_Tea_Menu.csv')}`);
