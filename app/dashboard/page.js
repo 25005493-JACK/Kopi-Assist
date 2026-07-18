@@ -58,7 +58,7 @@ const CustomTooltip = ({ active, payload, label, industryLabel }) => {
         )}
         {isProj && (
           <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: 'var(--accent-orange)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', maxWidth: '200px', lineHeight: '1.3' }}>
-            ℹ️ Projected 1-month forecast calculated from the 3-month moving average of current historical records{usedPrevYear ? ' and the same month of the previous year' : ''}.
+            ℹ️ Projected 1-month forecast calculated from the 3-month moving average of current historical records and the same month of the previous year (if data is available).
           </p>
         )}
       </div>
