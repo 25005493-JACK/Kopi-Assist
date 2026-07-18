@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '../../ai/openai-fallback';
+import { GoogleGenAI } from '@google/genai';
 import Papa from 'papaparse';
 
 export async function POST(request) {
