@@ -92,19 +92,99 @@ export default function AnomalyPage() {
     if (!company) return;
     setLoadingCustomAdvice(true);
     setCustomAdvice(null);
-    try {
-      const res = await fetch('/api/ai/predict/custom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company_id: company.id, cashflow: customCashflow })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCustomAdvice({ summary: data.summary, actions: data.actions });
+
+    // Simulate brief processing delay for UX
+    await new Promise(r => setTimeout(r, 800));
+
+    const totalIncome = customCashflow.reduce((s, m) => s + m.projected_income, 0);
+    const totalExpenses = customCashflow.reduce((s, m) => s + m.projected_expenses, 0);
+    const cumulativeNet = totalIncome - totalExpenses;
+    const avgMonthlyNet = Math.round(cumulativeNet / customCashflow.length);
+
+    let lowestNet = Infinity;
+    let lowestMonth = '';
+    let highestExp = 0;
+    let highestExpMonth = '';
+    const deficitMonths = [];
+    let consecutiveDeficit = 0;
+    let maxConsecutiveDeficit = 0;
+
+    customCashflow.forEach(m => {
+      if (m.net_cashflow < lowestNet) { lowestNet = m.net_cashflow; lowestMonth = m.month; }
+      if (m.projected_expenses > highestExp) { highestExp = m.projected_expenses; highestExpMonth = m.month; }
+      if (m.net_cashflow < 0) {
+        deficitMonths.push(m);
+        consecutiveDeficit++;
+        if (consecutiveDeficit > maxConsecutiveDeficit) maxConsecutiveDeficit = consecutiveDeficit;
+      } else {
+        consecutiveDeficit = 0;
       }
-    } catch (e) {
-      console.error(e);
+    });
+
+    // Detect trend direction
+    const firstHalfNet = customCashflow.slice(0, 3).reduce((s, m) => s + m.net_cashflow, 0);
+    const secondHalfNet = customCashflow.slice(3).reduce((s, m) => s + m.net_cashflow, 0);
+    const isImproving = secondHalfNet > firstHalfNet;
+    const isDeclining = secondHalfNet < firstHalfNet * 0.7;
+
+    // Detect income vs expense gap patterns
+    const expenseRatio = totalExpenses / (totalIncome || 1);
+    const companyName = company.company_name || 'Your company';
+    const headcount = company.headcount || 10;
+    const industry = company.industry?.split('|')[0] || 'F&B';
+
+    // Build contextual summary
+    let summary = `Your simulated 6-month forecast for ${companyName} shows total projected income of RM ${totalIncome.toLocaleString()} against total expenses of RM ${totalExpenses.toLocaleString()}, resulting in a cumulative net cashflow of RM ${cumulativeNet.toLocaleString()} (avg RM ${avgMonthlyNet.toLocaleString()}/month). `;
+
+    if (deficitMonths.length === 0) {
+      summary += `Cash flow remains positive throughout all 6 months, with the tightest margin in ${lowestMonth} (Net: RM ${lowestNet.toLocaleString()}). `;
+      if (isImproving) summary += `The trajectory shows an improving trend in the second half — a strong signal for growth reinvestment.`;
+      else if (isDeclining) summary += `However, the trend shows declining margins in the second half — monitor closely for potential cost creep.`;
+      else summary += `The flow is relatively stable across the period.`;
+    } else if (deficitMonths.length <= 2) {
+      summary += `We detected cash deficits in ${deficitMonths.length} month(s), with the deepest deficit in ${lowestMonth} at RM ${lowestNet.toLocaleString()}. `;
+      summary += `The highest expense pressure is in ${highestExpMonth} at RM ${highestExp.toLocaleString()}. Targeted cost controls in those months can prevent cash drain.`;
+    } else {
+      summary += `Warning: ${deficitMonths.length} out of 6 months show negative cashflow, with ${maxConsecutiveDeficit} consecutive deficit months. The deepest shortfall is RM ${Math.abs(lowestNet).toLocaleString()} in ${lowestMonth}. `;
+      summary += `This trajectory requires immediate intervention to avoid cash reserve depletion.`;
     }
+
+    // Build contextual actions
+    const actions = [];
+
+    if (deficitMonths.length >= 3) {
+      actions.push(`Immediate cost restructuring required: With ${deficitMonths.length} deficit months projected, ${companyName} should conduct an emergency plate-costing review — target food cost ratio of 28–35%. Eliminate bottom 20% margin menu items and renegotiate ingredient prices with Pasar Borong distributors to cut COGS by 10–15%.`);
+      actions.push(`Secure emergency financing: Approach your business bank for a short-term revolving credit facility of at least RM ${Math.round(Math.abs(deficitMonths.reduce((s, m) => s + m.net_cashflow, 0)) * 1.2).toLocaleString()} to bridge the projected ${deficitMonths.length}-month cash gap. Set up the facility before the deficit period begins — banks are less receptive once cash reserves are already depleted.`);
+      actions.push(`Revenue acceleration via delivery platforms: Launch a 14-day GrabFood/Shopee Food promotional campaign with 15% platform-subsidised discounts timed to start 2 weeks before ${deficitMonths[0].month}. Target a 25–30% order volume increase to offset the revenue shortfall during the deficit window.`);
+    } else if (deficitMonths.length > 0) {
+      actions.push(`Targeted cost control in ${highestExpMonth}: Your simulated expenses peak at RM ${highestExp.toLocaleString()} in ${highestExpMonth}. Review supplier invoices for that period — defer non-essential equipment maintenance, pause marketing spend temporarily, and negotiate 7-day payment deferrals with your top 3 ingredient suppliers to smooth the cash outflow.`);
+      actions.push(`Build a cash buffer before the deficit hits: Set aside 10–15% of income from the surplus months (approx. RM ${Math.round(customCashflow.filter(m => m.net_cashflow > 0).reduce((s, m) => s + m.net_cashflow * 0.12, 0)).toLocaleString()}) into a dedicated business savings account to cover the projected deficit in ${deficitMonths[0].month}.`);
+      actions.push(`Boost covers in low-revenue months: Introduce a weekday lunch set promotion (e.g. "RM 12 Business Lunch") during ${deficitMonths[0].month} to attract office workers and increase weekday dine-in cover count by 20–30%, directly lifting income during the trough period.`);
+    } else {
+      if (isDeclining) {
+        actions.push(`Address declining margin trend: Your second-half margins are contracting. Audit staff overtime costs and ingredient waste logs for Months 4–6. A 5% reduction in food waste alone could recover RM ${Math.round(totalExpenses * 0.02).toLocaleString()} over the simulation period.`);
+        actions.push(`Diversify revenue streams: With positive but shrinking margins, introduce a catering or corporate meal service targeting offices within 5km of your outlets. This creates a recurring B2B revenue layer that is less sensitive to walk-in traffic fluctuations.`);
+      } else {
+        actions.push(`Deploy surplus into growth: With RM ${cumulativeNet.toLocaleString()} cumulative surplus, allocate 30% (RM ${Math.round(cumulativeNet * 0.3).toLocaleString()}) into kitchen capacity upgrades — commercial fryers, blast chillers, or KDS (Kitchen Display Systems) — to increase throughput per service and reduce ticket preparation time.`);
+        actions.push(`Lock in ingredient pricing advantage: Use your healthy cash position to negotiate 3-month bulk prepayment deals with key food distributors at 10–15% discount. This locks in lower COGS for the simulation period and protects margins against ingredient price inflation.`);
+      }
+      actions.push(`Optimise delivery platform payout timing: Ensure GrabFood, Shopee Food, and Food Panda payout cycles are reconciled weekly. Platform payouts can lag up to 14 days — factor this delay into your weekly ingredient procurement schedule to avoid unnecessary short-term credit costs.`);
+    }
+
+    // Build contextual consequence
+    let consequence = '';
+    if (deficitMonths.length >= 3) {
+      const projectedLoss = Math.abs(deficitMonths.reduce((s, m) => s + m.net_cashflow, 0));
+      consequence = `If ${companyName} continues on this trajectory for 3 months, the cumulative cash shortfall will reach approximately RM ${projectedLoss.toLocaleString()}, making it increasingly difficult to meet weekly ingredient procurement costs and bi-monthly payroll for ${headcount} staff members. F&B businesses operating at sustained cash deficit risk being placed on cash-on-delivery terms by food distributors, eliminating credit flexibility and forcing the kitchen to operate with reduced ingredient variety. Without corrective action, the outlet risks temporary closure or forced staff reduction within the simulation window.`;
+    } else if (deficitMonths.length > 0) {
+      consequence = `Sustaining this cashflow curve will produce ${deficitMonths.length} cash-negative month(s), drawing down reserves by RM ${Math.abs(deficitMonths.reduce((s, m) => s + m.net_cashflow, 0)).toLocaleString()}. If the deficit month aligns with a high-obligation period (month-end rent, quarterly equipment maintenance, or festive ingredient pre-ordering), ${companyName} may be forced to delay supplier payments — jeopardising delivery priority and freshness of produce. Proactive action such as running a targeted delivery platform promotion can prevent this dip from escalating.`;
+    } else if (isDeclining) {
+      consequence = `Although cashflow remains positive, the declining trend means margins will continue to erode. If the second-half trajectory extrapolates forward, ${companyName} could face its first deficit month within 2–3 months beyond the simulation window. Competitors investing in kitchen upgrades and platform marketing during this period will compound their throughput and customer rating advantages, making recovery progressively harder.`;
+    } else {
+      consequence = `Maintaining this positive cashflow curve for 3 months without reinvesting surplus capital means ${companyName} is leaving significant value on the table. Idle cash in an F&B context carries an opportunity cost — competitors investing in equipment, staff training, or delivery platform marketing will compound their advantages. Redirecting 30% of the projected surplus (RM ${Math.round(cumulativeNet * 0.3).toLocaleString()}) into menu R&D, a new outlet trial, or a promotional fund would materially improve long-term revenue growth.`;
+    }
+
+    setCustomAdvice({ summary, actions, consequence });
     setLoadingCustomAdvice(false);
   };
 
