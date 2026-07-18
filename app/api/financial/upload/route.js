@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from '../../ai/openai-fallback';
 import Papa from 'papaparse';
 
 const BASEROW_URL = process.env.BASEROW_BASE_URL;

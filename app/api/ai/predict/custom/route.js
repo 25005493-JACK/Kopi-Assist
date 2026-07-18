@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from '../../openai-fallback';
 
 const BASEROW_URL = process.env.BASEROW_BASE_URL;
 const COMP_TABLE = process.env.BASEROW_COMPANY_TABLE_ID;
