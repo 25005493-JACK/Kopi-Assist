@@ -529,25 +529,6 @@ export default function AnomalyPage() {
                         <li key={idx} style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{act}</li>
                       ))}
                     </ul>
-
-                    {customAdvice.consequence && (
-                      <div style={{
-                        background: 'rgba(255, 61, 113, 0.07)',
-                        border: '1px solid rgba(255, 61, 113, 0.3)',
-                        borderLeft: '4px solid var(--accent-red)',
-                        borderRadius: '8px',
-                        padding: '14px 16px',
-                        marginTop: '20px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '1rem' }}>⏳</span>
-                          <strong style={{ color: 'var(--accent-red)', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>If This Trajectory Continues — 3 Month Consequence</strong>
-                        </div>
-                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.6', fontStyle: 'italic' }}>
-                          {customAdvice.consequence}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
