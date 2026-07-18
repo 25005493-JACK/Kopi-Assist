@@ -42,6 +42,7 @@ const CustomTooltip = ({ active, payload, label, industryLabel }) => {
     const exp = payload.find(p => p.dataKey === 'expenses')?.value || 0;
     const net = inc - exp;
     const avgNet = payload.find(p => p.dataKey === 'industryAvg')?.value;
+    const usedPrevYear = payload.find(p => p.payload?.isProjected)?.payload?.usedPrevYear;
     return (
       <div style={{ background: '#0a2012', border: '1px solid rgba(0,230,118,0.3)', borderRadius: '8px', padding: '12px', color: '#e8f5ed', minWidth: '190px' }}>
         <p style={{ margin: 0, fontWeight: 700, color: isProj ? 'var(--accent-blue)' : '#e8f5ed' }}>{label}</p>
@@ -57,7 +58,7 @@ const CustomTooltip = ({ active, payload, label, industryLabel }) => {
         )}
         {isProj && (
           <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: 'var(--accent-orange)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', maxWidth: '200px', lineHeight: '1.3' }}>
-            ℹ️ Projected 1-month forecast calculated from the 3-month moving average of current historical records.
+            ℹ️ Projected 1-month forecast calculated from the 3-month moving average of current historical records{usedPrevYear ? ' and the same month of the previous year' : ''}.
           </p>
         )}
       </div>
@@ -185,15 +186,28 @@ export default function DashboardPage() {
     
     // Average of last 3 months
     const last3 = chartData.slice(-3);
-    const avgIncome = Math.round(last3.reduce((s, d) => s + d.income, 0) / last3.length) || 0;
-    const avgExpenses = Math.round(last3.reduce((s, d) => s + d.expenses, 0) / last3.length) || 0;
+    const prevYearSameMonthKey = `${year - 1}-${String(month).padStart(2, '0')}`;
+    const prevYearData = monthlyMap[prevYearSameMonthKey];
+
+    let avgIncome, avgExpenses;
+    if (prevYearData) {
+      const sumIncome = last3.reduce((s, d) => s + d.income, 0) + prevYearData.income;
+      const sumExpenses = last3.reduce((s, d) => s + d.expenses, 0) + prevYearData.expenses;
+      const count = last3.length + 1;
+      avgIncome = Math.round(sumIncome / count) || 0;
+      avgExpenses = Math.round(sumExpenses / count) || 0;
+    } else {
+      avgIncome = Math.round(last3.reduce((s, d) => s + d.income, 0) / last3.length) || 0;
+      avgExpenses = Math.round(last3.reduce((s, d) => s + d.expenses, 0) / last3.length) || 0;
+    }
 
     chartData.push({
       month: nextMonthKey,
       income: avgIncome,
       expenses: avgExpenses,
       net: avgIncome - avgExpenses,
-      isProjected: true
+      isProjected: true,
+      usedPrevYear: !!prevYearData
     });
   }
 
